@@ -1,86 +1,66 @@
-import requests
-import tkinter as tk
 import random
-from PIL import Image, ImageTk
-from io import BytesIO
-
-# 1
-response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=Anapa&appid=1a8c0131701f1da33a933c92d7648b7b&units=metric&lang=ru")
-data = response.json()
-
-if response.status_code == 200:
-    temp = data['main']['temp']
-    weather = data['weather'][0]['description']
-    pressure = data['main']['pressure']
-    humidity = data['main']['humidity']
-    print(f"Погода в Анапе: {weather}, температура: {temp}°C, давление: {pressure} гПа, влажность: {humidity} %")
-else:
-   print(f"Ошибка: {data.get('message', 'Неизвестная ошибка')}")
 
 
-# 2
-response = requests.get('http://api.open-notify.org/iss-now.json')
-people = requests.get('http://api.open-notify.org/astros.json')
-data = response.json()
-data_people = people.json()
-if (response.status_code == 200) and (response.status_code == 200):
-    latitude = float(data['iss_position']['latitude'])
-    longitude = float(data['iss_position']['longitude'])
-    number = data_people['number']
-    print('Текущее местоположение МКС:')
-    print(f'Широта: {latitude}, Долгота: {longitude}')
-    print(f'Положение на карте: https://www.google.com/maps/@{latitude},{longitude}')
-    if number > 0:
-        print(f'Количетсво людей в космосе: {number}')
-        print('Их имена и организации:')
-        for person in data_people['people']:
-            name = person['name']
-            craft = person['craft']
-            print(f'{name}, {craft}')
-else:
-    print(f'Ошибка получения данных МКС: {response.status_code} {people.status_code}')
+def get_card_value(card):
+    if card in ['J', 'Q', 'K']:
+        return 10
+    elif card == 'A':
+        return 11
+    else:
+        return int(card)
 
 
-# 3
-categories = ["neko", "kitsune", "husbando", "waifu"]
-chosen_category = random.choice(categories)
-api_url = f"https://nekos.best/api/v2/{chosen_category}"
-def generate_image():
-
-    response = requests.get(api_url)
-    data = response.json()
-    image_url = data["results"][0]["url"]
-    img_response = requests.get(image_url)
-    pil_image = Image.open(BytesIO(img_response.content))
-    pil_image.thumbnail((400, 400), Image.Resampling.LANCZOS)
-    tk_image = ImageTk.PhotoImage(pil_image)
-
-    label.config(image=tk_image)
-    label.image = tk_image
-
-def cancel():
-    window.destroy()
+def calculate_score(cards):
+    score = sum(get_card_value(card) for card in cards)
+    aces_count = cards.count('A')
+    while score > 21 and aces_count > 0:
+        score -= 10
+        aces_count -= 1
+    return score
 
 
-window = tk.Tk()
-window.title('Your image')
-window.geometry('500x500')
+def get_random_card():
+    cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    return random.choice(cards)
 
 
-label = tk.Label(window)
-label.pack(pady=10, expand=True)
+def main():
+    player_cards = [get_random_card(), get_random_card()]
 
-generate_button = tk.Button(
-    window,
-    text="Сгенерировать!",
-    command=generate_image,
-    font=("Arial", 12),
-    bg="#4CAF50",
-    fg="white",
-    padx=20,
-    pady=10
-)
-generate_button.pack(pady=20)
+    print("Добро пожаловать в Блэкджек!")
+    print(f"Ваши карты: {', '.join(player_cards)}")
+    print(f"Очков: {calculate_score(player_cards)}")
 
+    while True:
+        command = input("\nВведите 'more' для новой карты или 'stop' для остановки: ").lower()
 
-window.mainloop()
+        if command == 'more':
+            new_card = get_random_card()
+            player_cards.append(new_card)
+            print(f"Вы получили карту: {new_card}")
+            print(f"Ваши карты: {', '.join(player_cards)}")
+            score = calculate_score(player_cards)
+            print(f"Очков: {score}")
+
+            if score > 21:
+                print("\nПеребор! Вы проиграли!")
+                break
+            elif score == 21:
+                print("\nУ вас 21 очко! Поздравляю!")
+                break
+
+        elif command == 'stop':
+            score = calculate_score(player_cards)
+            print(f"\nИгра окончена. Ваши очки: {score}")
+
+            if score == 21:
+                print("Блэкджек! Вы выиграли!")
+            elif score > 21:
+                print("Перебор! Вы проиграли!")
+            else:
+                print("Игра завершена.")
+            break
+        else:
+            print("Неверная команда. Введите 'more' или 'stop'")
+
+main()
